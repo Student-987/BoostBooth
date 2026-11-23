@@ -1,0 +1,138 @@
+{
+  "settings": {
+    "booth_name": "BoostBooth Studio",
+    "event_name": "Signature Event 2026",
+    "logo_url": "",
+    "drive_folder_id": "1803j-lPX2WNhkXJaPRbU5JUhRK8z74cj",
+    "retention_days": 7,
+    "max_photos_per_session": 4,
+    "default_countdown_sec": 10,
+    "gif_burst_seconds": 3,
+    "system_status": "active",
+    "camera_adapter": "uvc-hdmi",
+    "bridge_url": "http://localhost:8765",
+    "preferred_video_device_id": "",
+    "privacy_mode": "anyone_with_link",
+    "auto_reset_seconds": 60,
+    "gas_web_app_url_configured": false,
+    "gas_spreadsheet_id": "",
+    "gas_last_sync_at": ""
+  },
+  "secrets": {
+    "gas_web_app_url": "",
+    "gas_api_secret": ""
+  },
+  "frames": [
+    {
+      "frame_id": "FRM_EDITORIAL_4X5",
+      "frame_name": "Editorial Studio Portrait",
+      "category": "Portrait",
+      "description": "Clean single-shot vertical portrait frame (4:5) with gold hairline cutout.",
+      "drive_file_id": "",
+      "preview_url": "/uploads/frame_FRM_EDITORIAL_4X5.png",
+      "width": 960,
+      "height": 1200,
+      "frame_layout": [
+        {
+          "id": "slot-1",
+          "label": "Photo 1",
+          "x": 7,
+          "y": 6,
+          "width": 86,
+          "height": 76,
+          "fit": "cover"
+        }
+      ],
+      "is_active": true,
+      "is_starter": true,
+      "created_at": "2026-11-23T06:30:51.225Z"
+    },
+    {
+      "frame_id": "FRM_STRIP_3SHOT",
+      "frame_name": "Noir 3-Shot Strip",
+      "category": "Multi-Shot",
+      "description": "Classic 3-frame vertical photo strip for rapid multi-pose sessions.",
+      "drive_file_id": "",
+      "preview_url": "/uploads/frame_FRM_STRIP_3SHOT.png",
+      "width": 640,
+      "height": 1600,
+      "frame_layout": [
+        {
+          "id": "slot-1",
+          "label": "Shot 1",
+          "x": 8,
+          "y": 5,
+          "width": 84,
+          "height": 25,
+          "fit": "cover"
+        },
+        {
+          "id": "slot-2",
+          "label": "Shot 2",
+          "x": 8,
+          "y": 33,
+          "width": 84,
+          "height": 25,
+          "fit": "cover"
+        },
+        {
+          "id": "slot-3",
+          "label": "Shot 3",
+          "x": 8,
+          "y": 61,
+          "width": 84,
+          "height": 25,
+          "fit": "cover"
+        }
+      ],
+      "is_active": true,
+      "is_starter": true,
+      "created_at": "2026-11-23T06:30:51.225Z"
+    },
+    {
+      "frame_id": "FRM_DUO_LANDSCAPE",
+      "frame_name": "Gallery Duo Landscape",
+      "category": "Landscape",
+      "description": "Two-frame horizontal layout tailored for couples and group shots.",
+      "drive_file_id": "",
+      "preview_url": "/uploads/frame_FRM_DUO_LANDSCAPE.png",
+      "width": 1440,
+      "height": 960,
+      "frame_layout": [
+        {
+          "id": "slot-1",
+          "label": "Left Pose",
+          "x": 5,
+          "y": 10,
+          "width": 43,
+          "height": 72,
+          "fit": "cover"
+        },
+        {
+          "id": "slot-2",
+          "label": "Right Pose",
+          "x": 52,
+          "y": 10,
+          "width": 43,
+          "height": 72,
+          "fit": "cover"
+        }
+      ],
+      "is_active": true,
+      "is_starter": true,
+      "created_at": "2026-11-23T06:30:51.225Z"
+    }
+  ],
+  "sessions": [],
+  "media": [],
+  "logs": [
+    {
+      "log_id": "LOG_795A3138",
+      "timestamp": "2026-11-23T06:30:51.627Z",
+      "session_id": "SYSTEM",
+      "action": "BOOT_WORKSPACE",
+      "status": "info",
+      "message": "Initialized BoostBooth workspace and starter transparent PNG frame templates."
+    }
+  ]
+}

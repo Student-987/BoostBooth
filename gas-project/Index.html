@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <meta charset="UTF-8" />
+    <title>BoostBooth — Digital Studio Photo Booth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script type="module">
+      import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js';
+      window.__gifenc = { GIFEncoder, quantize, applyPalette };
+    </script>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --surface: #fbf9fa;
+        --tint: #fdf2f4;
+        --border: #efeaec;
+        --border-strong: #e5dadf;
+        --text: #18181b;
+        --muted: #71717a;
+        --accent: #7a1c2c;
+        --accent-hover: #611421;
+        --accent-ink: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-tap-highlight-color: transparent;
+      }
+      .font-display { font-family: "Outfit", "Plus Jakarta Sans", sans-serif; }
+      .font-mono { font-family: "JetBrains Mono", monospace; }
+      .hidden { display: none !important; }
+      .shell { min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow-x: hidden; }
+      .container { width: 100%; max-width: 1220px; margin: 0 auto; padding: 0 24px; }
+      .topbar {
+        width: 100%; max-width: 1220px; margin: 0 auto; padding: 18px 24px;
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        border-bottom: 1px solid var(--border); position: relative; z-index: 10;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .brand-mark {
+        width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0;
+      }
+      .brand-logo { width: 40px; height: 40px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+      .brand-name { font-family: "Outfit", sans-serif; font-size: 20px; font-weight: 600; color: #09090b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .nav-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+      .btn-primary {
+        min-height: 52px; padding: 14px 28px; border-radius: 14px; border: none;
+        background: var(--accent); color: var(--accent-ink); font-family: "Outfit", sans-serif;
+        font-weight: 700; font-size: 16px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        box-shadow: 0 12px 24px -8px rgba(122, 28, 44, 0.28); transition: background .15s ease, transform .1s ease;
+        text-decoration: none;
+      }
+      .btn-primary:hover { background: var(--accent-hover); }
+      .btn-primary:active { transform: scale(0.98); }
+      .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+      .btn-cta-xl { min-height: 64px; padding: 16px 44px; border-radius: 16px; font-size: 20px; }
+
+      .btn-secondary {
+        min-height: 42px; padding: 9px 16px; border-radius: 12px; border: 1px solid var(--border-strong);
+        background: #ffffff; color: #3f3f46; font-weight: 600; font-size: 13px; cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s ease;
+        text-decoration: none;
+      }
+      .btn-secondary:hover { background: var(--tint); color: var(--accent); border-color: #ead5da; }
+
+      .btn-line {
+        min-height: 44px; padding: 10px 18px; border-radius: 12px; border: none;
+        background: #06C755; color: #ffffff; font-weight: 600; font-size: 13px; cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none;
+      }
+
+      /* Welcome 2-column Hero */
+      .hero {
+        flex: 1; display: grid; grid-template-columns: 1fr; gap: 40px; align-items: center;
+        padding: 36px 24px 48px; max-width: 1220px; width: 100%; margin: 0 auto; position: relative; z-index: 10;
+      }
+      @media (min-width: 960px) {
+        .hero { grid-template-columns: 1.05fr 0.95fr; gap: 48px; }
+      }
+      .eyebrow { font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.14em; margin: 0; }
+      .hero-title {
+        font-family: "Outfit", sans-serif; font-size: clamp(36px, 5vw, 60px); font-weight: 700;
+        line-height: 1.06; letter-spacing: -0.02em; color: #09090b; margin: 12px 0 0;
+      }
+      .hero-sub { margin: 18px 0 0; font-size: 17px; line-height: 1.6; color: #52525b; max-width: 520px; }
+      .hero-collage { display: grid; grid-template-columns: 7fr 5fr; gap: 16px; align-items: stretch; }
+      .collage-main {
+        border-radius: 24px; overflow: hidden; background: var(--surface); border: 1px solid var(--border);
+        aspect-ratio: 3 / 4; box-shadow: 0 4px 16px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center;
+      }
+      .collage-side { display: flex; flex-direction: column; gap: 16px; }
+      .collage-tile {
+        flex: 1; border-radius: 24px; overflow: hidden; background: var(--surface); border: 1px solid var(--border);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center;
+      }
+      .collage-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .collage-placeholder {
+        width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: linear-gradient(145deg, #ffffff 0%, #fdf2f4 100%); color: var(--accent); padding: 20px; text-align: center;
+      }
+
+      /* Cards & Grids */
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 20px; }
+      .grid-frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+      .frame-card {
+        background: var(--surface); border: 2px solid var(--border); border-radius: 20px; padding: 16px;
+        cursor: pointer; transition: all .15s ease; display: flex; flex-direction: column; justify-content: space-between;
+      }
+      .frame-card.selected { background: var(--tint); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(122, 28, 44, 0.16); }
+      .frame-thumb-wrap {
+        aspect-ratio: 4 / 5; background: #ffffff; border: 1px solid var(--border); border-radius: 14px;
+        padding: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+      }
+      .frame-thumb { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+      /* Camera Stage */
+      .stage {
+        position: relative; width: 100%; max-width: 860px; margin: 0 auto; aspect-ratio: 4 / 3;
+        border-radius: 24px; overflow: hidden; border: 1px solid var(--border); background: var(--surface);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.06);
+      }
+      .mirror-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+      .guide-box { position: absolute; inset: 16px; border: 2px dashed rgba(122, 28, 44, 0.4); border-radius: 18px; pointer-events: none; }
+      .countdown {
+        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: rgba(255,255,255,0.24); pointer-events: none;
+      }
+      .countdown-num {
+        font-family: "Outfit", sans-serif; font-size: clamp(96px, 16vw, 156px); font-weight: 700; line-height: 1;
+        color: var(--accent); text-shadow: 0 4px 24px rgba(255,255,255,0.95); font-variant-numeric: tabular-nums;
+      }
+      .gif-badge {
+        margin-top: 12px; padding: 6px 14px; border-radius: 10px; background: var(--accent); color: #fff;
+        font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      .flash { position: absolute; inset: 0; background: #ffffff; pointer-events: none; }
+
+      /* Preview Tabs */
+      .tabs { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 4px; gap: 4px; }
+      .tab-btn {
+        min-height: 40px; padding: 6px 20px; border-radius: 10px; border: none; background: transparent;
+        font-size: 13px; font-weight: 600; color: #52525b; cursor: pointer;
+      }
+      .tab-btn.active { background: var(--accent); color: #fff; }
+      .preview-box {
+        width: 100%; max-width: 420px; border-radius: 24px; background: var(--surface); border: 1px solid var(--border);
+        padding: 16px; display: flex; align-items: center; justify-content: center;
+      }
+
+      /* Station Split */
+      .station-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+      @media (min-width: 900px) { .station-grid { grid-template-columns: 320px 1fr; } }
+      .session-row {
+        width: 100%; text-align: left; padding: 12px; border: none; border-bottom: 1px solid var(--border);
+        background: #fff; cursor: pointer; display: flex; align-items: center; gap: 10px;
+      }
+      .session-row.active { background: var(--tint); border-right: 3px solid var(--accent); }
+
+      input, select, textarea {
+        width: 100%; min-height: 42px; border-radius: 12px; border: 1px solid var(--border-strong);
+        padding: 8px 12px; font-size: 14px; background: #ffffff; color: var(--text); font-family: inherit;
+      }
+      label.field-label { display: block; font-size: 12px; font-weight: 600; color: #3f3f46; margin-bottom: 6px; }
+    </style>
+  </head>
+  <body>
+    <div id="appShell" class="shell">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="brand">
+          <img id="brandLogoImg" class="brand-logo hidden" alt="Logo" referrerpolicy="no-referrer" />
+          <div id="brandMarkFallback" class="brand-mark font-display">B</div>
+          <span id="boothTitle" class="brand-name">BoostBooth Studio</span>
+        </div>
+        <div class="nav-actions">
+          <button class="btn-secondary" onclick="openStation()">Staff Station</button>
+          <button class="btn-secondary" onclick="openAdmin()">Admin</button>
+          <button id="navKioskBtn" class="btn-secondary hidden" onclick="showView('welcome')">Kiosk</button>
+        </div>
+      </header>
+
+      <!-- VIEW: WELCOME (White & Burgundy Editorial Layout matching Preview) -->
+      <section id="view-welcome" class="hero">
+        <div>
+          <p id="welcomeEventEyebrow" class="eyebrow">Signature Event 2026</p>
+          <h1 id="welcomeHeadline" class="hero-title">Step in, strike a pose, and take the moment home.</h1>
+          <p id="welcomeSubtitle" class="hero-sub hidden"></p>
+          <div style="margin-top:34px;">
+            <button id="welcomeStartBtn" class="btn-primary btn-cta-xl" onclick="openFrames()">
+              <span id="welcomeCtaLabel">START</span>
+              <span>&#8594;</span>
+            </button>
+          </div>
+          <p id="noFramesWarning" class="hidden" style="margin-top:14px;font-size:13px;color:var(--accent);">
+            No active frames available. Add or create starter frames in Admin.
+          </p>
+        </div>
+
+        <div class="hero-collage">
+          <div class="collage-main" id="heroSlot0"></div>
+          <div class="collage-side">
+            <div class="collage-tile" id="heroSlot1"></div>
+            <div class="collage-tile" id="heroSlot2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: FRAME SELECTION -->
+      <section id="view-frames" class="hidden container" style="flex:1;padding-top:28px;padding-bottom:48px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px;">
+          <button class="btn-secondary" onclick="showView('welcome')">&#8592; Back</button>
+          <h2 class="font-display" style="margin:0;font-size:24px;">Choose Frame</h2>
+          <button id="continueToCamBtn" class="btn-primary" style="min-height:44px;padding:10px 20px;font-size:14px;" disabled onclick="startSelectedFrame()">Continue &#8594;</button>
+        </div>
+        <div id="framesGrid" class="grid-frames"></div>
+      </section>
+
+      <!-- VIEW: CAMERA (10s COUNTDOWN + LAST 3s GIF PER SHOT + MIRROR) -->
+      <section id="view-camera" class="hidden container" style="flex:1;padding-top:24px;padding-bottom:40px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <button class="btn-secondary" onclick="stopCameraAndBack()">&#8592; Frames</button>
+          <span id="shotLabel" class="font-mono" style="font-size:14px;font-weight:600;">Shot 1 / 1</span>
+          <span id="camFrameTitle" style="font-size:13px;color:var(--muted);"></span>
+        </div>
+        <div class="stage">
+          <video id="liveVideo" class="mirror-video" autoplay playsinline webkit-playsinline muted></video>
+          <div class="guide-box"></div>
+          <div id="cameraErrorBox" class="hidden" style="position:absolute;inset:0;background:rgba(251,249,250,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;z-index:10;">
+            <strong class="font-display" style="font-size:20px;color:#09090b;">Camera Offline</strong>
+            <p id="cameraErrorText" style="font-size:13px;color:#52525b;max-width:440px;line-height:1.6;margin:8px 0 16px;"></p>
+            <button class="btn-primary" style="min-height:44px;padding:10px 22px;font-size:14px;" onclick="startSelectedFrame()">Retry Camera</button>
+          </div>
+          <div id="countdownOverlay" class="countdown hidden">
+            <div id="countdownNum" class="countdown-num">10</div>
+            <div id="gifBadge" class="gif-badge hidden">GIF</div>
+          </div>
+          <div id="flashOverlay" class="flash hidden"></div>
+        </div>
+        <div style="text-align:center;margin-top:22px;">
+          <button id="shootBtn" class="btn-primary btn-cta-xl" onclick="start10sCapture()">Take Photo</button>
+        </div>
+      </section>
+
+      <!-- VIEW: PREVIEW (Photo & Live Per-Slot Framed GIF Tabs, No Retake) -->
+      <section id="view-preview" class="hidden container" style="flex:1;padding-top:24px;padding-bottom:44px;display:flex;flex-direction:column;align-items:center;gap:20px;">
+        <div style="width:100%;max-width:720px;display:flex;justify-content:space-between;align-items:center;">
+          <span id="previewFrameName" style="font-size:13px;color:var(--muted);"></span>
+          <h2 class="font-display" style="margin:0;font-size:22px;">Preview</h2>
+          <button class="btn-primary" style="min-height:44px;padding:10px 20px;font-size:14px;" onclick="proceedToGenerate()">Create QR &#8594;</button>
+        </div>
+        <div class="tabs">
+          <button id="tabPhotoBtn" class="tab-btn active" onclick="switchPreviewTab('photo')">Photo</button>
+          <button id="tabGifBtn" class="tab-btn" onclick="switchPreviewTab('gif')">GIF</button>
+        </div>
+        <div class="preview-box">
+          <img id="previewPhotoImg" alt="Framed Photo" style="width:100%;max-height:58vh;object-fit:contain;border-radius:16px;" />
+          <div id="previewGifStage" class="hidden" style="position:relative;width:100%;max-height:58vh;background:#fff;border-radius:16px;overflow:hidden;"></div>
+        </div>
+        <button class="btn-primary btn-cta-xl" style="width:100%;max-width:420px;font-size:18px;" onclick="proceedToGenerate()">Save &amp; Get QR Code</button>
+      </section>
+
+      <!-- VIEW: PROCESSING -->
+      <section id="view-processing" class="hidden container" style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px;">
+        <div class="card" style="width:100%;max-width:480px;padding:32px;text-align:center;">
+          <h2 class="font-display" style="margin:0 0 8px;">Preparing Files</h2>
+          <p id="processStatus" style="margin:0;font-size:14px;color:var(--muted);">Rendering Photo &amp; 3s per-slot GIF...</p>
+        </div>
+      </section>
+
+      <!-- VIEW: QR DOWNLOAD (KIOSK) -->
+      <section id="view-qr" class="hidden container" style="flex:1;padding-top:28px;padding-bottom:48px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;align-items:center;max-width:960px;margin:0 auto;">
+          <div class="card" style="text-align:center;">
+            <img id="qrPhotoPreview" alt="Framed Photo" style="max-height:56vh;max-width:100%;object-fit:contain;border-radius:16px;" />
+          </div>
+          <div class="card" style="text-align:center;padding:32px;">
+            <h2 class="font-display" style="margin:0 0 18px;font-size:28px;">Scan QR Code</h2>
+            <div style="display:inline-block;background:#ffffff;padding:16px;border-radius:18px;border:1px solid var(--border);">
+              <canvas id="qrCanvas"></canvas>
+            </div>
+            <div style="margin-top:16px;">
+              <a id="directOpenLink" target="_blank" class="btn-secondary" style="width:100%;">Open Download Link</a>
+            </div>
+            <button class="btn-primary" style="width:100%;margin-top:14px;" onclick="resetKiosk()">Done</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: MOBILE DOWNLOAD PAGE (?page=download&token=...) -->
+      <section id="view-download" class="hidden container" style="flex:1;padding-top:28px;padding-bottom:48px;max-width:680px;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <p id="dlEventLabel" class="eyebrow"></p>
+          <h1 class="font-display" style="margin:6px 0 0;font-size:28px;">Your Photos</h1>
+        </div>
+        <div id="downloadList" style="display:grid;gap:18px;"></div>
+      </section>
+
+      <!-- VIEW: PARALLEL STAFF AIRDROP & LINE STATION -->
+      <section id="view-station" class="hidden container" style="flex:1;padding-top:24px;padding-bottom:48px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+          <div>
+            <h2 class="font-display" style="margin:0;font-size:22px;">Staff AirDrop &amp; LINE Station</h2>
+            <p style="margin:4px 0 0;font-size:12px;color:var(--muted);">ซิงค์รายการอัตโนมัติทุก 5 วินาที พร้อมส่ง AirDrop / ส่ง LINE / ดาวน์โหลด</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-secondary" onclick="loadStationFeed()">Refresh</button>
+            <button class="btn-primary" style="min-height:42px;padding:8px 16px;font-size:13px;" onclick="showView('welcome')">Kiosk View</button>
+          </div>
+        </div>
+        <div class="station-grid">
+          <div class="card" style="padding:0;overflow:hidden;max-height:68vh;overflow-y:auto;" id="stationSessionList"></div>
+          <div class="card" id="stationDetailPane">Select a session folder on the left.</div>
+        </div>
+      </section>
+
+      <!-- VIEW: ADMIN DASHBOARD -->
+      <section id="view-admin" class="hidden container" style="flex:1;padding-top:24px;padding-bottom:56px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+          <h2 class="font-display" style="margin:0;font-size:24px;">Admin Console</h2>
+          <button class="btn-primary" style="min-height:42px;padding:8px 18px;font-size:13px;" onclick="showView('welcome')">Open Kiosk</button>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <strong style="color:var(--accent);">Google Sheets &amp; Drive Connection</strong>
+            <div id="adminStatsText" style="font-size:13px;color:var(--muted);margin-top:4px;">Loading...</div>
+          </div>
+          <button class="btn-primary" style="min-height:42px;padding:10px 18px;font-size:13px;" onclick="initGasSheets()">Initialize / Verify Sheets &amp; Drive</button>
+        </div>
+
+        <!-- Welcome Screen Editor -->
+        <div class="card" style="margin-bottom:20px;">
+          <h3 class="font-display" style="margin:0 0 14px;">Welcome Screen &amp; Decorative Images</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+            <div>
+              <label class="field-label">Booth Name</label>
+              <input id="admBoothName" />
+            </div>
+            <div>
+              <label class="field-label">Event Name</label>
+              <input id="admEventName" />
+            </div>
+            <div>
+              <label class="field-label">Welcome Headline</label>
+              <input id="admHeadline" />
+            </div>
+            <div>
+              <label class="field-label">Start Button Label</label>
+              <input id="admCtaLabel" />
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label class="field-label">Optional Subtitle (เว้นว่างไว้ได้)</label>
+              <input id="admSubtitle" />
+            </div>
+            <div style="grid-column:1 / -1;">
+              <label class="field-label">Google Drive Target Folder ID / URL (โฟลเดอร์เก็บรูปทดสอบ)</label>
+              <input id="admDriveFolderId" placeholder="1803j-lPX2WNhkXJaPRbU5JUhRK8z74cj" />
+            </div>
+            <div>
+              <label class="field-label">Upload Brand Logo</label>
+              <input type="file" accept="image/*" onchange="uploadAsset('logo_url', this.files[0])" />
+            </div>
+            <div>
+              <label class="field-label">Upload Showcase Photo 1 (ซ้ายใหญ่)</label>
+              <input type="file" accept="image/*" onchange="uploadAsset('welcome_hero_0', this.files[0])" />
+            </div>
+            <div>
+              <label class="field-label">Upload Showcase Photo 2 (ขวาบน)</label>
+              <input type="file" accept="image/*" onchange="uploadAsset('welcome_hero_1', this.files[0])" />
+            </div>
+            <div>
+              <label class="field-label">Upload Showcase Photo 3 (ขวาล่าง)</label>
+              <input type="file" accept="image/*" onchange="uploadAsset('welcome_hero_2', this.files[0])" />
+            </div>
+          </div>
+          <div style="margin-top:16px;text-align:right;">
+            <button class="btn-primary" style="min-height:42px;padding:10px 22px;font-size:14px;" onclick="saveWelcomeSettings()">Save Welcome Changes</button>
+          </div>
+        </div>
+
+        <!-- Canva Frame Manager -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+            <h3 class="font-display" style="margin:0;">Upload Canva Transparent PNG Frame</h3>
+            <button class="btn-secondary" onclick="createStarterFramesInGas()">+ Create 3 Starter Frames</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+            <input id="newFrameName" placeholder="Frame Name" />
+            <input id="newFrameCat" placeholder="Category (e.g. Portrait)" value="Event" />
+            <select id="newFramePreset">
+              <option value="1">1 Photo Slot (Portrait)</option>
+              <option value="3">3 Photo Slots (Strip)</option>
+              <option value="2">2 Photo Slots (Duo)</option>
+            </select>
+            <input id="newFramePng" type="file" accept="image/png" />
+          </div>
+          <div style="margin-top:14px;">
+            <button class="btn-primary" style="min-height:42px;padding:10px 20px;font-size:13px;" onclick="uploadCanvaFrame()">Save Frame to Drive &amp; Sheets</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      var INITIAL_PAGE = '<?= initialPage ?>';
+      var INITIAL_TOKEN = '<?= initialToken ?>';
+      var WEB_APP_URL = '<?= webAppUrl ?>';
+
+      var state = {
+        settings: {},
+        frames: [],
+        selectedFrame: null,
+        stream: null,
+        capturedPhotos: [],
+        gifBurstsBySlot: [],
+        composedPhotoUrl: '',
+        previewTab: 'photo',
+        previewTimer: null,
+        stationSessions: [],
+        stationTimer: null,
+      };
+
+      function gasRun(fn, arg) {
+        return new Promise(function (resolve, reject) {
+          var r = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+          if (arg !== undefined) r[fn](arg);
+          else r[fn]();
+        });
+      }
+
+      function showView(id) {
+        if (state.stationTimer && id !== 'station') {
+          clearInterval(state.stationTimer);
+          state.stationTimer = null;
+        }
+        if (state.previewTimer && id !== 'preview') {
+          clearInterval(state.previewTimer);
+          state.previewTimer = null;
+        }
+        ['welcome', 'frames', 'camera', 'preview', 'processing', 'qr', 'download', 'station', 'admin'].forEach(function (v) {
+          var el = document.getElementById('view-' + v);
+          if (el) el.classList.toggle('hidden', v !== id);
+        });
+        document.getElementById('navKioskBtn').classList.toggle('hidden', id === 'welcome' || id === 'download');
+      }
+
+      function applySettingsToWelcome() {
+        var s = state.settings || {};
+        document.getElementById('boothTitle').textContent = s.booth_name || 'BoostBooth Studio';
+        document.getElementById('welcomeEventEyebrow').textContent = s.event_name || 'Signature Event 2026';
+        document.getElementById('welcomeHeadline').textContent = s.welcome_headline || 'Step in, strike a pose, and take the moment home.';
+        document.getElementById('welcomeCtaLabel').textContent = s.welcome_cta_label || 'START';
+
+        var subEl = document.getElementById('welcomeSubtitle');
+        if (s.welcome_subtitle && s.welcome_subtitle.trim()) {
+          subEl.textContent = s.welcome_subtitle;
+          subEl.classList.remove('hidden');
+        } else {
+          subEl.classList.add('hidden');
+        }
+
+        var logoImg = document.getElementById('brandLogoImg');
+        var mark = document.getElementById('brandMarkFallback');
+        if (s.logo_url) {
+          logoImg.src = s.logo_url;
+          logoImg.classList.remove('hidden');
+          mark.classList.add('hidden');
+        } else {
+          logoImg.classList.add('hidden');
+          mark.classList.remove('hidden');
+        }
+
+        var shell = document.getElementById('appShell');
+        if (s.welcome_bg_url) {
+          shell.style.backgroundImage = 'linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.95)), url(' + s.welcome_bg_url + ')';
+          shell.style.backgroundSize = 'cover';
+          shell.style.backgroundPosition = 'center';
+        } else {
+          shell.style.backgroundImage = '';
+        }
+
+        var fallbackSvgs = [
+          '<svg viewBox="0 0 300 400" style="width:100%;height:100%;display:block;" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="400" fill="#FDF2F4"/><circle cx="150" cy="145" r="54" fill="#7A1C2C" fill-opacity="0.14"/><circle cx="150" cy="145" r="34" fill="#7A1C2C" fill-opacity="0.24"/><rect x="44" y="232" width="212" height="120" rx="22" fill="#FFFFFF" stroke="#EAD5DA" stroke-width="2"/><rect x="74" y="264" width="152" height="16" rx="8" fill="#7A1C2C" fill-opacity="0.85"/><rect x="98" y="294" width="104" height="12" rx="6" fill="#E5DADF"/></svg>',
+          '<svg viewBox="0 0 300 240" style="width:100%;height:100%;display:block;" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="240" fill="#FBF9FA"/><rect x="34" y="26" width="232" height="188" rx="18" fill="#FFFFFF" stroke="#EAD5DA" stroke-width="2"/><circle cx="118" cy="108" r="28" fill="#7A1C2C" fill-opacity="0.22"/><circle cx="182" cy="108" r="28" fill="#7A1C2C" fill-opacity="0.34"/><rect x="86" y="156" width="128" height="22" rx="11" fill="#7A1C2C"/></svg>',
+          '<svg viewBox="0 0 300 240" style="width:100%;height:100%;display:block;" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="240" fill="#FDF2F4"/><rect x="70" y="26" width="160" height="188" rx="18" fill="#FFFFFF" stroke="#EAD5DA" stroke-width="2"/><rect x="104" y="56" width="92" height="92" rx="10" fill="#7A1C2C" fill-opacity="0.12" stroke="#7A1C2C" stroke-width="2"/><rect x="118" y="168" width="64" height="14" rx="7" fill="#7A1C2C"/></svg>'
+        ];
+        [0, 1, 2].forEach(function (idx) {
+          var box = document.getElementById('heroSlot' + idx);
+          var url = s['welcome_hero_' + idx];
+          if (url) {
+            box.innerHTML = '<img class="collage-img" referrerpolicy="no-referrer" src="' + url + '" alt="Showcase" />';
+          } else {
+            box.innerHTML = fallbackSvgs[idx];
+          }
+        });
+
+        document.getElementById('noFramesWarning').classList.toggle('hidden', state.frames.length > 0);
+        document.getElementById('welcomeStartBtn').disabled = state.frames.length === 0;
+      }
+
+      function bootstrap() {
+        gasRun('getStandaloneBootstrap', INITIAL_TOKEN).then(function (data) {
+          state.settings = data.settings || {};
+          state.frames = data.frames || [];
+          if (data.webAppUrl) WEB_APP_URL = data.webAppUrl;
+          applySettingsToWelcome();
+
+          if (INITIAL_PAGE === 'download' && data.downloadData) {
+            renderMobileDownload(data.downloadData);
+            showView('download');
+            return;
+          }
+          if (INITIAL_PAGE === 'station') {
+            openStation();
+            return;
+          }
+          if (INITIAL_PAGE === 'admin') {
+            openAdmin();
+            return;
+          }
+          renderFrames();
+          showView('welcome');
+        });
+      }
+
+      function openFrames() {
+        renderFrames();
+        showView('frames');
+      }
+
+      function renderFrames() {
+        var grid = document.getElementById('framesGrid');
+        if (!state.frames.length) {
+          grid.innerHTML = '<div class="card">No active frames yet. Open Admin to upload a Canva PNG frame or create starter frames.</div>';
+          return;
+        }
+        grid.innerHTML = state.frames.map(function (f, idx) {
+          var isSel = state.selectedFrame && state.selectedFrame.frame_id === f.frame_id;
+          return '<div class="frame-card ' + (isSel ? 'selected' : '') + '" onclick="pickFrame(' + idx + ')">' +
+            '<div class="frame-thumb-wrap"><img class="frame-thumb" referrerpolicy="no-referrer" src="' + f.preview_url + '" /></div>' +
+            '<div style="margin-top:12px;"><strong class="font-display" style="font-size:16px;">' + f.frame_name + '</strong>' +
+            '<div style="font-size:12px;color:var(--muted);margin-top:4px;">' + f.category + ' · ' + (f.frame_layout ? f.frame_layout.length : 1) + ' slot(s)</div></div>' +
+          '</div>';
+        }).join('');
+        document.getElementById('continueToCamBtn').disabled = !state.selectedFrame;
+      }
+
+      function pickFrame(idx) {
+        state.selectedFrame = state.frames[idx];
+        renderFrames();
+      }
+
+      function startSelectedFrame() {
+        if (!state.selectedFrame) return;
+        document.getElementById('camFrameTitle').textContent = state.selectedFrame.frame_name;
+        var errBox = document.getElementById('cameraErrorBox');
+        var errText = document.getElementById('cameraErrorText');
+        errBox.classList.add('hidden');
+        document.getElementById('shootBtn').disabled = true;
+        showView('camera');
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          errText.textContent = 'เบราว์เซอร์หรือ Google Apps Script iframe บล็อกการเข้าถึงกล้อง — แนะนำให้เปิดผ่านเว็บหลัก (Cloud Run / Web App URL) แล้วเชื่อม GAS เป็นหลังบ้านแทน';
+          errBox.classList.remove('hidden');
+          return;
+        }
+
+        function tryStream(constraints) {
+          return navigator.mediaDevices.getUserMedia(constraints);
+        }
+
+        tryStream({ video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: 'user' }, audio: false })
+          .catch(function () { return tryStream({ video: { facingMode: 'user' }, audio: false }); })
+          .catch(function () { return tryStream({ video: true, audio: false }); })
+          .then(function (stream) {
+            state.stream = stream;
+            var video = document.getElementById('liveVideo');
+            video.muted = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.srcObject = stream;
+            return video.play().catch(function () {});
+          })
+          .then(function () {
+            if (state.stream) {
+              document.getElementById('shootBtn').disabled = false;
+            }
+          })
+          .catch(function (err) {
+            errText.textContent = 'ไม่สามารถเปิดกล้องได้ (' + (err && err.message ? err.message : 'Permission blocked') + ') หากเปิดผ่าน script.google.com iframe แนะนำให้ใช้เว็บหลัก Cloud Run แล้วเชื่อมต่อ GAS URL ในหน้า Admin แทน';
+            errBox.classList.remove('hidden');
+          });
+      }
+
+      function stopCameraAndBack() {
+        if (state.stream) {
+          state.stream.getTracks().forEach(function (t) { t.stop(); });
+          state.stream = null;
+        }
+        showView('frames');
+      }
+
+      function captureMirrorFrame(video, maxW) {
+        var vw = video.videoWidth || 1280;
+        var vh = video.videoHeight || 720;
+        var scale = maxW && vw > maxW ? (maxW / vw) : 1;
+        var c = document.createElement('canvas');
+        c.width = Math.round(vw * scale);
+        c.height = Math.round(vh * scale);
+        var ctx = c.getContext('2d');
+        ctx.translate(c.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, c.width, c.height);
+        return c.toDataURL('image/jpeg', 0.9);
+      }
+
+      function start10sCapture() {
+        var btn = document.getElementById('shootBtn');
+        var overlay = document.getElementById('countdownOverlay');
+        var numEl = document.getElementById('countdownNum');
+        var gifBadge = document.getElementById('gifBadge');
+        var video = document.getElementById('liveVideo');
+        var slots = (state.selectedFrame.frame_layout && state.selectedFrame.frame_layout.length)
+          ? state.selectedFrame.frame_layout
+          : [{ x: 5, y: 5, width: 90, height: 90, fit: 'cover' }];
+
+        var countdownSec = Math.max(3, Number(state.settings.default_countdown_sec || 10));
+        var gifSec = Math.min(countdownSec, Math.max(1, Number(state.settings.gif_burst_seconds || 3)));
+
+        btn.disabled = true;
+        state.capturedPhotos = [];
+        state.gifBurstsBySlot = [];
+        var shotIdx = 0;
+
+        function runShot() {
+          document.getElementById('shotLabel').textContent = 'Shot ' + (shotIdx + 1) + ' / ' + slots.length;
+          overlay.classList.remove('hidden');
+          var sec = countdownSec;
+          numEl.textContent = sec;
+          var shotBurst = [];
+          var burstTimer = null;
+
+          var iv = setInterval(function () {
+            sec--;
+            if (sec <= gifSec && sec > 0) {
+              gifBadge.classList.remove('hidden');
+              if (!burstTimer) {
+                shotBurst.push(captureMirrorFrame(video, 720));
+                burstTimer = setInterval(function () {
+                  if (shotBurst.length < 10) shotBurst.push(captureMirrorFrame(video, 720));
+                }, 320);
+              }
+            }
+            if (sec <= 0) {
+              clearInterval(iv);
+              if (burstTimer) clearInterval(burstTimer);
+              gifBadge.classList.add('hidden');
+              overlay.classList.add('hidden');
+              document.getElementById('flashOverlay').classList.remove('hidden');
+              setTimeout(function () { document.getElementById('flashOverlay').classList.add('hidden'); }, 150);
+              var stillUrl = captureMirrorFrame(video, 1600);
+              state.capturedPhotos.push(stillUrl);
+              shotBurst.push(stillUrl);
+              state.gifBurstsBySlot.push(shotBurst);
+              shotIdx++;
+              if (shotIdx < slots.length) {
+                setTimeout(runShot, 800);
+              } else {
+                btn.disabled = false;
+                if (state.stream) {
+                  state.stream.getTracks().forEach(function (t) { t.stop(); });
+                  state.stream = null;
+                }
+                openPreview();
+              }
+            } else {
+              numEl.textContent = sec;
+            }
+          }, 1000);
+        }
+
+        runShot();
+      }
+
+      function drawCoverSlot(ctx, img, slot, canvasW, canvasH) {
+        var sx = (slot.x / 100) * canvasW;
+        var sy = (slot.y / 100) * canvasH;
+        var sw = (slot.width / 100) * canvasW;
+        var sh = (slot.height / 100) * canvasH;
+        var iw = img.naturalWidth || img.width || 1280;
+        var ih = img.naturalHeight || img.height || 720;
+        var ir = iw / ih;
+        var sr = sw / sh;
+        var dw = sw, dh = sh;
+        if (ir > sr) { dh = sh; dw = sh * ir; } else { dw = sw; dh = sw / ir; }
+        ctx.save();
+        ctx.translate(sx + sw / 2, sy + sh / 2);
+        ctx.beginPath();
+        ctx.rect(-sw / 2, -sh / 2, sw, sh);
+        ctx.clip();
+        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+        ctx.restore();
+      }
+
+      function composeFramedImage(photos, frame, maxW) {
+        return new Promise(function (resolve, reject) {
+          var frameImg = new Image();
+          frameImg.crossOrigin = 'anonymous';
+          frameImg.onload = function () {
+            var rawW = frame.width || frameImg.naturalWidth || 1200;
+            var rawH = frame.height || frameImg.naturalHeight || 1800;
+            var scale = maxW && rawW > maxW ? (maxW / rawW) : 1;
+            var c = document.createElement('canvas');
+            c.width = Math.round(rawW * scale);
+            c.height = Math.round(rawH * scale);
+            var ctx = c.getContext('2d');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, c.width, c.height);
+
+            Promise.all(photos.map(function (src) {
+              return new Promise(function (res) {
+                var im = new Image();
+                im.onload = function () { res(im); };
+                im.src = src;
+              });
+            })).then(function (imgs) {
+              var slots = (frame.frame_layout && frame.frame_layout.length) ? frame.frame_layout : [{ x: 5, y: 5, width: 90, height: 90 }];
+              slots.forEach(function (slot, i) { drawCoverSlot(ctx, imgs[i % imgs.length], slot, c.width, c.height); });
+              ctx.drawImage(frameImg, 0, 0, c.width, c.height);
+              resolve(c.toDataURL('image/jpeg', 0.92));
+            });
+          };
+          frameImg.onerror = reject;
+          frameImg.src = frame.preview_url;
+        });
+      }
+
+      function openPreview() {
+        var f = state.selectedFrame;
+        document.getElementById('previewFrameName').textContent = f.frame_name;
+        showView('preview');
+        switchPreviewTab('photo');
+        composeFramedImage(state.capturedPhotos, f, 1000).then(function (url) {
+          state.composedPhotoUrl = url;
+          document.getElementById('previewPhotoImg').src = url;
+        });
+      }
+
+      function switchPreviewTab(tab) {
+        state.previewTab = tab;
+        document.getElementById('tabPhotoBtn').classList.toggle('active', tab === 'photo');
+        document.getElementById('tabGifBtn').classList.toggle('active', tab === 'gif');
+        document.getElementById('previewPhotoImg').classList.toggle('hidden', tab !== 'photo');
+        var gifStage = document.getElementById('previewGifStage');
+        gifStage.classList.toggle('hidden', tab !== 'gif');
+        if (state.previewTimer) { clearInterval(state.previewTimer); state.previewTimer = null; }
+
+        if (tab === 'gif') {
+          var f = state.selectedFrame;
+          var slots = (f.frame_layout && f.frame_layout.length) ? f.frame_layout : [{ id: 's1', x: 5, y: 5, width: 90, height: 90 }];
+          gifStage.style.aspectRatio = (f.width || 960) + ' / ' + (f.height || 1200);
+          var seqs = slots.map(function (_, idx) {
+            var raw = state.gifBurstsBySlot[idx] || [state.capturedPhotos[idx] || state.capturedPhotos[0]];
+            return raw.length > 2 ? raw.concat(raw.slice(1, -1).reverse()) : raw;
+          });
+          var maxLen = Math.max.apply(null, seqs.map(function (s) { return s.length; }));
+          gifStage.innerHTML = slots.map(function (sl, i) {
+            return '<div style="position:absolute;overflow:hidden;left:' + sl.x + '%;top:' + sl.y + '%;width:' + sl.width + '%;height:' + sl.height + '%;"><img id="gifSlotImg_' + i + '" style="width:100%;height:100%;object-fit:cover;" /></div>';
+          }).join('') + '<img src="' + f.preview_url + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:5;" />';
+
+          var tick = 0;
+          function renderTick() {
+            slots.forEach(function (_, i) {
+              var sq = seqs[i];
+              var idx = maxLen > 1 ? Math.round((tick / (maxLen - 1)) * (sq.length - 1)) : 0;
+              var el = document.getElementById('gifSlotImg_' + i);
+              if (el) el.src = sq[idx];
+            });
+            tick = (tick + 1) % maxLen;
+          }
+          renderTick();
+          state.previewTimer = setInterval(renderTick, 140);
+        }
+      }
+
+      function encodeFramedGifDataUrl(burstsBySlot, frame) {
+        return new Promise(function (resolve) {
+          if (!window.__gifenc || !burstsBySlot.length) return resolve(null);
+          var frameImg = new Image();
+          frameImg.crossOrigin = 'anonymous';
+          frameImg.onload = function () {
+            var baseW = frame.width || frameImg.naturalWidth || 960;
+            var baseH = frame.height || frameImg.naturalHeight || 1200;
+            var targetW = Math.min(540, baseW);
+            var targetH = Math.round((baseH / baseW) * targetW);
+            var c = document.createElement('canvas');
+            c.width = targetW; c.height = targetH;
+            var ctx = c.getContext('2d', { willReadFrequently: true });
+            var slots = (frame.frame_layout && frame.frame_layout.length) ? frame.frame_layout : [{ x: 5, y: 5, width: 90, height: 90 }];
+            var seqs = slots.map(function (_, i) {
+              var raw = burstsBySlot[i % burstsBySlot.length];
+              return raw.length > 2 ? raw.concat(raw.slice(1, -1).reverse()) : raw;
+            });
+            var unique = [];
+            seqs.forEach(function (sq) { sq.forEach(function (u) { if (unique.indexOf(u) === -1) unique.push(u); }); });
+            var cache = {};
+            Promise.all(unique.map(function (u) {
+              return new Promise(function (res) {
+                var im = new Image(); im.onload = function () { cache[u] = im; res(); }; im.src = u;
+              });
+            })).then(function () {
+              var total = Math.max.apply(null, seqs.map(function (s) { return s.length; }));
+              var gif = window.__gifenc.GIFEncoder();
+              for (var i = 0; i < total; i++) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, targetW, targetH);
+                slots.forEach(function (sl, si) {
+                  var sq = seqs[si];
+                  var mapped = total > 1 ? Math.round((i / (total - 1)) * (sq.length - 1)) : 0;
+                  if (cache[sq[mapped]]) drawCoverSlot(ctx, cache[sq[mapped]], sl, targetW, targetH);
+                });
+                ctx.drawImage(frameImg, 0, 0, targetW, targetH);
+                var imgData = ctx.getImageData(0, 0, targetW, targetH);
+                var pal = window.__gifenc.quantize(imgData.data, 256);
+                var idxArr = window.__gifenc.applyPalette(imgData.data, pal);
+                gif.writeFrame(idxArr, targetW, targetH, { palette: pal, delay: 140 });
+              }
+              gif.finish();
+              var blob = new Blob([gif.bytes().buffer], { type: 'image/gif' });
+              var rd = new FileReader();
+              rd.onload = function () { resolve(rd.result); };
+              rd.readAsDataURL(blob);
+            });
+          };
+          frameImg.onerror = function () { resolve(null); };
+          frameImg.src = frame.preview_url;
+        });
+      }
+
+      function proceedToGenerate() {
+        showView('processing');
+        var frame = state.selectedFrame;
+        document.getElementById('processStatus').textContent = 'Rendering Framed Photo & 3s Per-Slot GIF...';
+        Promise.all([
+          state.composedPhotoUrl ? Promise.resolve(state.composedPhotoUrl) : composeFramedImage(state.capturedPhotos, frame, 1400),
+          encodeFramedGifDataUrl(state.gifBurstsBySlot, frame)
+        ]).then(function (results) {
+          var photoUrl = results[0];
+          var gifUrl = results[1];
+          document.getElementById('processStatus').textContent = 'Saving to Google Drive...';
+          gasRun('createBoothSession', { selected_frame_id: frame.frame_id }).then(function (session) {
+            var uploads = state.capturedPhotos.map(function (rawUrl, idx) {
+              return gasRun('saveMediaUpload', {
+                session_id: session.session_id,
+                media_type: 'original',
+                file_name: session.session_id + '_original_' + (idx + 1) + '.jpg',
+                mime_type: 'image/jpeg',
+                base64Data: rawUrl,
+              });
+            });
+            uploads.push(
+              gasRun('saveMediaUpload', {
+                session_id: session.session_id,
+                media_type: 'framed',
+                file_name: session.session_id + '_framed.jpg',
+                mime_type: 'image/jpeg',
+                base64Data: photoUrl,
+              })
+            );
+            if (gifUrl) {
+              uploads.push(gasRun('saveMediaUpload', {
+                session_id: session.session_id,
+                media_type: 'gif',
+                file_name: session.session_id + '_boomerang.gif',
+                mime_type: 'image/gif',
+                base64Data: gifUrl,
+              }));
+            }
+            Promise.all(uploads).then(function () {
+              gasRun('updateSessionStatus', { session_id: session.session_id, session_status: 'ready' });
+              document.getElementById('qrPhotoPreview').src = photoUrl;
+              document.getElementById('directOpenLink').href = session.qr_url;
+              QRCode.toCanvas(document.getElementById('qrCanvas'), session.qr_url, { width: 220, margin: 2 });
+              showView('qr');
+            });
+          });
+        });
+      }
+
+      function renderMobileDownload(dl) {
+        document.getElementById('dlEventLabel').textContent = dl.event_name || dl.booth_name || '';
+        var list = document.getElementById('downloadList');
+        list.innerHTML = (dl.media || []).map(function (m) {
+          return '<div class="card">' +
+            '<img referrerpolicy="no-referrer" src="' + m.drive_view_url + '" style="width:100%;border-radius:14px;" />' +
+            '<div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;">' +
+              '<span style="font-size:13px;font-weight:700;text-transform:uppercase;">' + (m.media_type === 'gif' ? '3s Boomerang GIF' : 'Framed Photo') + '</span>' +
+              '<a class="btn-primary" style="min-height:42px;padding:8px 18px;font-size:13px;" href="' + m.drive_download_url + '" target="_blank" download="' + m.file_name + '">Download</a>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      function openStation() {
+        showView('station');
+        loadStationFeed();
+        state.stationTimer = setInterval(loadStationFeed, 5000);
+      }
+
+      function loadStationFeed() {
+        gasRun('getStationFeedPayload').then(function (res) {
+          state.stationSessions = res.sessions || [];
+          var listEl = document.getElementById('stationSessionList');
+          if (!state.stationSessions.length) {
+            listEl.innerHTML = '<div style="padding:20px;font-size:13px;color:var(--muted);">No sessions yet.</div>';
+            return;
+          }
+          listEl.innerHTML = state.stationSessions.map(function (s, idx) {
+            return '<button class="session-row ' + (idx === 0 ? 'active' : '') + '" onclick="selectStationSession(' + idx + ')">' +
+              '<div style="min-width:0;flex:1;"><div class="font-mono" style="font-size:12px;font-weight:700;">' + s.session_id + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);">' + (s.selected_frame_name || '') + ' · ' + (s.media ? s.media.length : 0) + ' files</div></div></button>';
+          }).join('');
+          selectStationSession(0);
+        });
+      }
+
+      function shareAllStationFiles(sessionId) {
+        gasRun('getSessionMediaDataUrls', sessionId).then(function (items) {
+          var files = items.map(function (it) {
+            var bin = atob(it.base64);
+            var arr = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            return new File([arr], it.file_name, { type: it.mime_type || 'image/jpeg' });
+          });
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: files })) {
+            return navigator.share({ files: files, title: sessionId });
+          }
+        }).catch(function () {});
+      }
+
+      function selectStationSession(idx) {
+        var s = state.stationSessions[idx];
+        if (!s) return;
+        var pane = document.getElementById('stationDetailPane');
+        var lineUrl = 'https://line.me/R/msg/text/?' + encodeURIComponent((state.settings.booth_name || 'BoostBooth') + ': ' + s.qr_url);
+        var mediaList = (s.media || []).slice().sort(function (a, b) {
+          var oa = a.media_type === 'framed' ? 0 : a.media_type === 'gif' ? 1 : 2;
+          var ob = b.media_type === 'framed' ? 0 : b.media_type === 'gif' ? 1 : 2;
+          return oa !== ob ? oa - ob : String(a.file_name).localeCompare(String(b.file_name));
+        });
+        pane.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">' +
+          '<div><strong class="font-mono">' + s.session_id + '</strong><div style="font-size:12px;color:var(--muted);">' + (s.selected_frame_name || '') + '</div></div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<button class="btn-primary" style="min-height:42px;padding:8px 16px;font-size:13px;" onclick="shareAllStationFiles(\'' + s.session_id + '\')">AirDrop / Share ทั้งหมด (' + mediaList.length + ' ไฟล์)</button>' +
+            '<a class="btn-line" href="' + lineUrl + '" target="_blank">ส่งเข้า LINE</a>' +
+            '<a class="btn-secondary" href="' + s.qr_url + '" target="_blank">Open QR Link</a>' +
+          '</div></div>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">' +
+          mediaList.map(function (m) {
+            return '<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:10px;">' +
+              '<img referrerpolicy="no-referrer" src="' + m.drive_view_url + '" style="width:100%;height:180px;object-fit:contain;border-radius:10px;" />' +
+              '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-top:6px;text-transform:uppercase;">' + (m.media_type === 'original' ? 'Original Raw' : m.media_type) + '</div>' +
+              '<a class="btn-primary" style="width:100%;min-height:38px;padding:6px 12px;font-size:12px;margin-top:6px;" href="' + m.drive_download_url + '" target="_blank" download="' + m.file_name + '">Download</a>' +
+            '</div>';
+          }).join('') + '</div>';
+      }
+
+      function openAdmin() {
+        showView('admin');
+        gasRun('getAdminDashboardPayload').then(function (d) {
+          state.settings = d.settings || state.settings;
+          document.getElementById('adminStatsText').textContent =
+            'Sessions: ' + d.stats.total_sessions + ' · Photos: ' + d.stats.total_photos + ' · GIFs: ' + d.stats.total_gifs + ' · Active Frames: ' + d.stats.active_frames;
+          document.getElementById('admBoothName').value = state.settings.booth_name || '';
+          document.getElementById('admEventName').value = state.settings.event_name || '';
+          document.getElementById('admHeadline').value = state.settings.welcome_headline || '';
+          document.getElementById('admCtaLabel').value = state.settings.welcome_cta_label || 'START';
+          document.getElementById('admSubtitle').value = state.settings.welcome_subtitle || '';
+          document.getElementById('admDriveFolderId').value = state.settings.drive_folder_id || '1803j-lPX2WNhkXJaPRbU5JUhRK8z74cj';
+        });
+      }
+
+      function saveWelcomeSettings() {
+        var payload = {
+          booth_name: document.getElementById('admBoothName').value,
+          event_name: document.getElementById('admEventName').value,
+          welcome_headline: document.getElementById('admHeadline').value,
+          welcome_cta_label: document.getElementById('admCtaLabel').value,
+          welcome_subtitle: document.getElementById('admSubtitle').value,
+          drive_folder_id: document.getElementById('admDriveFolderId').value,
+        };
+        gasRun('updateSettingsBatch', payload).then(function (updated) {
+          state.settings = updated;
+          applySettingsToWelcome();
+          openAdmin();
+        });
+      }
+
+      function uploadAsset(settingKey, file) {
+        if (!file) return;
+        var rd = new FileReader();
+        rd.onload = function () {
+          gasRun('uploadWelcomeAsset', {
+            settingKey: settingKey,
+            fileName: settingKey + '_' + file.name,
+            mimeType: file.type || 'image/png',
+            base64Data: rd.result,
+          }).then(function (res) {
+            state.settings[settingKey] = res.url;
+            applySettingsToWelcome();
+          });
+        };
+        rd.readAsDataURL(file);
+      }
+
+      function initGasSheets() {
+        var folderVal = document.getElementById('admDriveFolderId') ? document.getElementById('admDriveFolderId').value : '';
+        gasRun('initializeDatabase', { drive_folder_id: folderVal }).then(function (res) {
+          document.getElementById('adminStatsText').textContent = 'Initialized Sheet: ' + res.spreadsheetId + ' · Drive Folder: ' + res.driveFolderId;
+        });
+      }
+
+      function createStarterFramesInGas() {
+        var presets = [
+          { name: 'Editorial Studio Portrait', cat: 'Portrait', w: 960, h: 1200, slots: [{ id: 'slot-1', label: 'Photo 1', x: 7, y: 6, width: 86, height: 76, fit: 'cover' }] },
+          { name: 'Gallery 3-Shot Strip', cat: 'Multi-Shot', w: 640, h: 1600, slots: [{ id: 'slot-1', x: 8, y: 5, width: 84, height: 25, fit: 'cover' }, { id: 'slot-2', x: 8, y: 33, width: 84, height: 25, fit: 'cover' }, { id: 'slot-3', x: 8, y: 61, width: 84, height: 25, fit: 'cover' }] },
+          { name: 'Gallery Duo Landscape', cat: 'Landscape', w: 1440, h: 960, slots: [{ id: 'slot-1', x: 5, y: 10, width: 43, height: 72, fit: 'cover' }, { id: 'slot-2', x: 52, y: 10, width: 43, height: 72, fit: 'cover' }] },
+        ];
+        Promise.all(presets.map(function (p) {
+          var c = document.createElement('canvas');
+          c.width = p.w; c.height = p.h;
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, p.w, p.h);
+          p.slots.forEach(function (sl) {
+            var sx = (sl.x / 100) * p.w, sy = (sl.y / 100) * p.h, sw = (sl.width / 100) * p.w, sh = (sl.height / 100) * p.h;
+            ctx.strokeStyle = '#7A1C2C';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(sx - 3, sy - 3, sw + 6, sh + 6);
+            ctx.clearRect(sx, sy, sw, sh);
+          });
+          return gasRun('saveFrameRecord', {
+            frame_name: p.name, category: p.cat, width: p.w, height: p.h, frame_layout: p.slots,
+            pngBase64: c.toDataURL('image/png'), is_active: true
+          });
+        })).then(function () { bootstrap(); openAdmin(); });
+      }
+
+      function uploadCanvaFrame() {
+        var file = document.getElementById('newFramePng').files[0];
+        if (!file) return;
+        var preset = document.getElementById('newFramePreset').value;
+        var layout = preset === '3'
+          ? [{ id: 'slot-1', x: 8, y: 5, width: 84, height: 25, fit: 'cover' }, { id: 'slot-2', x: 8, y: 33, width: 84, height: 25, fit: 'cover' }, { id: 'slot-3', x: 8, y: 61, width: 84, height: 25, fit: 'cover' }]
+          : preset === '2'
+            ? [{ id: 'slot-1', x: 5, y: 10, width: 43, height: 72, fit: 'cover' }, { id: 'slot-2', x: 52, y: 10, width: 43, height: 72, fit: 'cover' }]
+            : [{ id: 'slot-1', x: 8, y: 8, width: 84, height: 76, fit: 'cover' }];
+        var reader = new FileReader();
+        reader.onload = function () {
+          var img = new Image();
+          img.onload = function () {
+            gasRun('saveFrameRecord', {
+              frame_name: document.getElementById('newFrameName').value || 'Canva Frame',
+              category: document.getElementById('newFrameCat').value || 'Event',
+              width: img.naturalWidth,
+              height: img.naturalHeight,
+              frame_layout: layout,
+              pngBase64: reader.result,
+              is_active: true,
+            }).then(function () {
+              bootstrap();
+              openAdmin();
+            });
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function resetKiosk() {
+        showView('welcome');
+      }
+
+      bootstrap();
+    </script>
+  </body>
+</html>
